@@ -1,0 +1,189 @@
+############################
+#
+# Refugee Events
+#
+# Written by Martin Anward
+#
+############################
+
+namespace = refugees
+
+# Refugees Arrive (new species)
+pop_event = {
+	id = refugees.1
+	title = refugees.1.name	
+	picture = GFX_evt_unknown_ships
+	location = root
+	
+	desc = {
+		text = refugees.1.desc.1
+		trigger = {
+			event_target:RefugeeEscapedFrom = { 
+				root = {
+					OR = {
+						NOT = { has_citizenship_type = { type = citizenship_purge country = prev } }
+						has_purge_type = { type = purge_displacement country = prev }
+					}				
+				}
+			}
+		}
+	}
+	desc = {
+		text = refugees.1.desc.2
+		trigger = {
+			event_target:RefugeeEscapedFrom = { 
+				root = {
+					has_citizenship_type = { type = citizenship_purge country = prev }
+					NOT = { has_purge_type = { type = purge_displacement country = prev } }
+				}
+			}
+		}
+	}		
+	
+	is_triggered_only = yes
+	
+	option = {
+		name = refugees.1.a
+	}
+}
+
+# Displacement - pop migrates into uncharted regions
+pop_event = {
+	id = refugees.2
+	title = OK
+	desc = OK
+	
+	hide_window = yes
+	
+	trigger = {
+		exists = owner
+		owner = { is_country_type = default }
+		is_robot_pop = no
+		NOR = { 
+			has_trait = trait_hive_mind 
+			has_trait = trait_nerve_stapled
+		}
+		OR = {
+			pop_can_live_on_planet = no
+			has_citizenship_type = { type = citizenship_purge }
+		}
+	}
+	
+	mean_time_to_happen = {
+		years = 50
+		modifier = {
+			factor = 2
+			has_purge_type = { type = purge_neutering }
+		}
+		modifier = {
+			factor = 0.25
+			has_purge_type = { type = purge_displacement }
+		}		
+	}
+	
+	immediate = {
+		kill_pop = yes
+	}
+}
+
+# Pop escapes purges into welcoming arms of refugee-takers
+pop_event = {
+	id = refugees.3
+	title = OK
+	desc = OK
+	
+	hide_window = yes
+	
+	trigger = {
+		exists = owner
+		owner = { is_country_type = default }
+		is_robot_pop = no
+		NOR = { 
+			has_trait = trait_hive_mind 
+			has_trait = trait_nerve_stapled
+		}		
+		has_citizenship_type = { type = citizenship_purge }
+		NOT = { has_purge_type = { type = purge_displacement } }
+		owner = {
+			any_relation = {
+				is_country_type = default
+				NOT = { has_policy_flag = refugees_not_allowed } 
+				root = {
+					OR = { 
+						has_citizenship_type = { type = citizenship_full country = prev }
+						has_citizenship_type = { type = citizenship_caste_system country = prev }
+						AND = {
+							has_citizenship_type = { type = citizenship_limited country = prev }
+							has_citizenship_type = { type = citizenship_caste_system_limited country = prev }
+							prev = { has_policy_flag = refugees_allowed }
+						}	
+					}		
+				}
+				any_owned_planet = {
+					habitability = { who = root value > 0.4 }
+					any_tile = {
+						has_blocker = no
+						has_pop = no
+					}
+				}
+			}		
+		}
+	}
+	
+	mean_time_to_happen = {
+		years = 50
+	}
+	
+	immediate = {
+		remove_modifier = "pop_recently_conquered"
+		owner = {
+			save_event_target_as = RefugeeEscapedFrom
+			random_relation = {
+				limit = {
+					is_country_type = default
+					NOT = { has_policy_flag = refugees_not_allowed } 
+					root = {
+						OR = { 
+							has_citizenship_type = { type = citizenship_full country = prev }
+							has_citizenship_type = { type = citizenship_caste_system country = prev }
+							AND = {
+								has_citizenship_type = { type = citizenship_limited country = prev }
+								has_citizenship_type = { type = citizenship_caste_system_limited country = prev }
+								prev = { has_policy_flag = refugees_allowed }
+							}	
+						}		
+					}				
+				}
+				random_owned_planet = {
+					limit = {
+						habitability = { who = root value > 0.4 }
+						any_tile = {
+							has_blocker = no
+							has_pop = no
+						}					
+					}
+					resettle_pop = {
+						pop = root
+						planet = this
+					}
+					root = { add_modifier = { modifier = recent_refugee days = 3600 } }
+					if = {
+						limit = {
+							NOT = {
+								owner = {
+									any_owned_planet = {
+										any_owned_pop = {
+											NOT = { is_same_value = root }
+											is_same_species = root
+										}
+									}
+								}
+							}				
+						}		
+						root = { pop_event = { id = refugees.1 } }
+					}					
+				}
+			}		
+		}		
+	}
+}
